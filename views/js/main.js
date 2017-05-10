@@ -329,6 +329,16 @@ var ingredientItemizer = function(string) {
   return "<li>" + string + "</li>";
 };
 
+// 循环生成的dom 一次性插入
+function appendDomOnce(parent, eles) {
+  if (!parent || !eles.length) return false;
+  var oFragment = document.createDocumentFragment();
+  eles.map(function(e) {
+    oFragment.appendChild(e);
+  })
+  parent.appendChild(oFragment);
+}
+
 // 返回嵌套在<li>中的披萨原料字符串
 var makeRandomPizza = function() {
   var pizza = "";
@@ -446,10 +456,11 @@ var resizePizzas = function(size) {
 
   // 遍历披萨的元素并改变它们的宽度
   function changePizzaSizes(size) {
-    for (var i = 0; i < document.querySelectorAll(".randomPizzaContainer").length; i++) {
-      var dx = determineDx(document.querySelectorAll(".randomPizzaContainer")[i], size);
-      var newwidth = (document.querySelectorAll(".randomPizzaContainer")[i].offsetWidth + dx) + 'px';
-      document.querySelectorAll(".randomPizzaContainer")[i].style.width = newwidth;
+    var randomPizzaContainer = document.querySelectorAll(".randomPizzaContainer");
+    for (var i = 0; i < randomPizzaContainer.length; i++) {
+      var dx = determineDx(randomPizzaContainer[i], size);
+      var newwidth = (randomPizzaContainer[i].offsetWidth + dx) + 'px';
+      randomPizzaContainer[i].style.width = newwidth;
     }
   }
 
@@ -465,10 +476,12 @@ var resizePizzas = function(size) {
 window.performance.mark("mark_start_generating"); // 收集timing数据
 
 // 这个for循环在页面加载时创建并插入了所有的披萨
+var pizzasDiv = document.getElementById("randomPizzas"),
+    pizzasDivEles = [];
 for (var i = 2; i < 100; i++) {
-  var pizzasDiv = document.getElementById("randomPizzas");
-  pizzasDiv.appendChild(pizzaElementGenerator(i));
+  pizzasDivEles.push(pizzaElementGenerator(i));
 }
+appendDomOnce(pizzasDiv, pizzasDivEles);
 
 // 使用User Timing API。这里的测量数据告诉了你生成初始的披萨用了多长时间
 window.performance.mark("mark_end_generating");
@@ -494,13 +507,14 @@ function logAverageFrame(times) {   // times参数是updatePositions()由User Ti
 // https://www.igvita.com/slides/2012/devtools-tips-and-tricks/jank-demo.html
 
 // 基于滚动条位置移动背景中的披萨滑窗
+var items = []; //document.querySelectorAll('.mover');
 function updatePositions() {
   frame++;
   window.performance.mark("mark_start_frame");
-
-  var items = document.querySelectorAll('.mover');
+  items = items || document.querySelectorAll('.mover');
+  var top = document.body.scrollTop;
   for (var i = 0; i < items.length; i++) {
-    var phase = Math.sin((document.body.scrollTop / 1250) + (i % 5));
+    var phase = Math.sin((top / 1250) + (i % 5));
     items[i].style.left = items[i].basicLeft + 100 * phase + 'px';
   }
 
@@ -519,17 +533,21 @@ window.addEventListener('scroll', updatePositions);
 
 // 当页面加载时生成披萨滑窗
 document.addEventListener('DOMContentLoaded', function() {
-  var cols = 8;
-  var s = 256;
+  var cols = 8,
+      s = 256,
+      movingPizzas1 = document.querySelector("#movingPizzas1"),
+      oFragment = document.createDocumentFragment();
   for (var i = 0; i < 200; i++) {
     var elem = document.createElement('img');
-    elem.className = 'mover';
     elem.src = "images/pizza.png";
+    elem.className = 'mover';
     elem.style.height = "100px";
     elem.style.width = "73.333px";
     elem.basicLeft = (i % cols) * s;
     elem.style.top = (Math.floor(i / cols) * s) + 'px';
-    document.querySelector("#movingPizzas1").appendChild(elem);
+    items.push(elem);
+    oFragment.appendChild(elem);
   }
+  movingPizzas1.appendChild(oFragment);
   updatePositions();
 });
