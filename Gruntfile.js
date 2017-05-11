@@ -4,24 +4,30 @@ module.exports = function(grunt) {
 		pkg: grunt.file.readJSON('package.json'),
 
 		cssmin: {
-			/* css文件压缩 */
-			style: {
-				src: 'css/style.css',
-				dest: 'css/style.min.css' //压缩
-			},
-			print: {
-				src: 'css/print.css',
-				dest: 'css/print.min.css' //压缩
-			},
+		  target: {
+		    files: [{
+		      expand: true,
+		      cwd: 'src/css',
+		      src: ['*.css'],
+		      dest: 'dist/css',
+		      ext: '.min.css'
+		    }]
+		  }
 		},
 		uglify: {
 			/* js 文件压缩 */
 			options: {
-				banner: '/*! <%= pkg.name %> <%= grunt.template.today("yyyy-mm-dd") %> */\n'
+				banner: '/*! <%= pkg.name %> <%= grunt.template.today("yyyy-mm-dd") %> */\n',
+				sourceMap: true,
 			},
 			build: {
-				src: 'js/perfmatters.js',
-				dest: 'js/perfmatters.min.js'
+				files: [{
+					expand: true,
+					cwd: 'src/js',
+					src: '**/*.js',
+					dest: 'dist/js',
+					ext: '.min.js'
+				}],
 			}
 	    },
 	    imagemin: {
@@ -32,9 +38,9 @@ module.exports = function(grunt) {
                 },
                 files: [{
                     expand: true,
-                    cwd: 'img/', //原图存放的文件夹
+                    cwd: 'src/img/', //原图存放的文件夹
                     src: ['**/*.{png,jpg,jpeg,gif}'], // 优化 img 目录下所有 png/jpg/jpeg/gif图片
-                    dest: 'img/' //优化后的图片覆盖旧图片
+                    dest: 'dist/img/' //优化后的图片覆盖旧图片
                 }]
             }
         },
@@ -42,7 +48,7 @@ module.exports = function(grunt) {
 
 	// 加载包含 "uglify" 任务的插件。
     grunt.loadNpmTasks('grunt-contrib-imagemin');
-	grunt.loadNpmTasks('grunt-css');
+	grunt.loadNpmTasks('grunt-contrib-cssmin');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 
 
