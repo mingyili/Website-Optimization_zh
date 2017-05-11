@@ -395,7 +395,11 @@ var pizzaElementGenerator = function(i) {
   return pizzaContainer;
 };
 
-// 可以将多个dom 一次性插入
+/**
+ * 可以将多个dom 一次性插入
+ * @param  {dom} parent 要插入到的元素
+ * @param  {[]} eles   要一次性插入的所有元素的数组
+ */
 function appendDomOnce(parent, eles) {
   if (!parent || !eles.length) return false;
   var oFragment = document.createDocumentFragment();
@@ -405,20 +409,20 @@ function appendDomOnce(parent, eles) {
   parent.appendChild(oFragment);
 }
 
-// 页面内容初始化
+/**
+ * 页面底部menu内容初始化
+ */
 function initPizzas() {
   window.performance.mark("mark_start_generating"); // 收集timing数据
 
-
   // 这个for循环在页面加载时创建并插入了所有的披萨
   var pizzasDiv = document.getElementById("randomPizzas"),
-      oFragment = document.createDocumentFragment();
+      eles = [];
   for (var i = 2; i < 100; i++) {
-    oFragment.appendChild(pizzaElementGenerator(i));
+    pizzasDiv.appendChild(pizzaElementGenerator(i));
+    //eles.push(pizzaElementGenerator(i));
   }
-  pizzasDiv.appendChild(oFragment);
-
-  //appendDomOnce(parent, eles)
+  //appendDomOnce(pizzasDiv, eles);
 
   // 使用User Timing API。这里的测量数据告诉了你生成初始的披萨用了多长时间
   window.performance.mark("mark_end_generating");
@@ -426,9 +430,7 @@ function initPizzas() {
   var timeToGenerate = window.performance.getEntriesByName("measure_pizza_generation");
   console.log("Time to generate pizzas on load: " + timeToGenerate[0].duration + "ms");
 }
-
 initPizzas();
-
 
 // 当网站中"Our Pizzas"的滑窗部分移动时调用resizePizzas(size)函数
 var resizePizzas = function(size) {
@@ -480,10 +482,12 @@ var resizePizzas = function(size) {
   }
 
   // 遍历披萨的元素并改变它们的宽度
+  // 由于图片宽度都是一样的，获取第一个图片的宽度并缓存，避免多次dom查找
   function changePizzaSizes(size) {
     var randomPizzaContainer = document.querySelectorAll(".randomPizzaContainer");
     var dx = determineDx(randomPizzaContainer[0], size);
     var newwidth = (randomPizzaContainer[0].offsetWidth + dx) + 'px';
+
     for (var i = 0; i < randomPizzaContainer.length; i++) {
       randomPizzaContainer[i].style.width = newwidth;
     }
@@ -515,18 +519,20 @@ function logAverageFrame(times) {   // times参数是updatePositions()由User Ti
 // 下面的关于背景滑窗披萨的代码来自于Ilya的demo:
 // https://www.igvita.com/slides/2012/devtools-tips-and-tricks/jank-demo.html
 
-
+// 存储所有要操作的 pizza dom
+var moveItems = [];
 // 基于滚动条位置移动背景中的披萨滑窗
-var items = []; //document.querySelectorAll('.mover');
 function updatePositions() {
   frame++;
   window.performance.mark("mark_start_frame");
-  var top = document.body.scrollTop;
-  items = items || document.querySelectorAll('.mover');
 
-  for (var i = 0; i < items.length; i++) {
+  // 当前的scrollTop缓存，避免重复查询
+  var top = document.body.scrollTop;
+  moveItems = moveItems || document.querySelectorAll('.mover');
+
+  for (var i = 0; i < moveItems.length; i++) {
     var phase = Math.sin((top / 1250) + (i % 5));
-    items[i].style.left = items[i].basicLeft + 100 * phase + 'px';
+    moveItems[i].style.left = moveItems[i].basicLeft + 100 * phase + 'px';
   }
 
   // 再次使用User Timing API。这很值得学习
@@ -538,7 +544,6 @@ function updatePositions() {
     logAverageFrame(timesToUpdatePosition);
   }
 }
-
 // 在页面滚动时运行updatePositions函数
 window.addEventListener('scroll', updatePositions);
 
@@ -546,9 +551,7 @@ window.addEventListener('scroll', updatePositions);
 document.addEventListener('DOMContentLoaded', function() {
   var cols = 8,
       s = 256,
-      movingPizzas1 = document.querySelector("#movingPizzas1"),
-      // 创建一个dom 片段，用于存储创建的 dom 最后再一起append
-      oFragment = document.createDocumentFragment();
+      movingPizzas1 = document.querySelector("#movingPizzas1");
 
   for (var i = 0; i < 200; i++) {
     var elem = document.createElement('img');
@@ -558,11 +561,14 @@ document.addEventListener('DOMContentLoaded', function() {
     elem.style.width = "73.333px";
     elem.basicLeft = (i % cols) * s;
     elem.style.top = (Math.floor(i / cols) * s) + 'px';
-    items.push(elem);
-    oFragment.appendChild(elem);
+    // 存储创建的dom
+    moveItems.push(elem);
+    movingPizzas1.appendChild(elem);
   }
-  movingPizzas1.appendChild(oFragment);
+  // 一次添加所有dom, 避免循环添加
+  //appendDomOnce(movingPizzas1, moveItems);
 
+  //initPizzas();
   //updatePositions();
   //延迟执行，可以防止第一次的强制重排 因为要调用 document.body.scrollTop
   requestAnimationFrame(updatePositions);
