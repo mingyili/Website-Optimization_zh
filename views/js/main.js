@@ -329,16 +329,6 @@ var ingredientItemizer = function(string) {
   return "<li>" + string + "</li>";
 };
 
-// 循环生成的dom 一次性插入
-function appendDomOnce(parent, eles) {
-  if (!parent || !eles.length) return false;
-  var oFragment = document.createDocumentFragment();
-  eles.map(function(e) {
-    oFragment.appendChild(e);
-  })
-  parent.appendChild(oFragment);
-}
-
 // 返回嵌套在<li>中的披萨原料字符串
 var makeRandomPizza = function() {
   var pizza = "";
@@ -378,32 +368,67 @@ var pizzaElementGenerator = function(i) {
   pizzaImageContainer = document.createElement("div");
   pizzaImage = document.createElement("img");
   pizzaDescriptionContainer = document.createElement("div");
+  pizzaName = document.createElement("h4");
+  ul = document.createElement("ul");
 
   pizzaContainer.classList.add("randomPizzaContainer");
+  pizzaImage.classList.add("img-responsive");
+
   pizzaContainer.style.width = "33.33%";
   pizzaContainer.style.height = "325px";
   pizzaContainer.id = "pizza" + i;                // 给每个披萨元素赋一个独一无二的id
   pizzaImageContainer.style.width="35%";
 
   pizzaImage.src = "images/pizza.png";
-  pizzaImage.classList.add("img-responsive");
-  pizzaImageContainer.appendChild(pizzaImage);
-  pizzaContainer.appendChild(pizzaImageContainer);
-
 
   pizzaDescriptionContainer.style.width="65%";
 
-  pizzaName = document.createElement("h4");
   pizzaName.innerHTML = randomName();
-  pizzaDescriptionContainer.appendChild(pizzaName);
-
-  ul = document.createElement("ul");
   ul.innerHTML = makeRandomPizza();
+
+  pizzaImageContainer.appendChild(pizzaImage);
+  pizzaDescriptionContainer.appendChild(pizzaName);
   pizzaDescriptionContainer.appendChild(ul);
+  pizzaContainer.appendChild(pizzaImageContainer);
   pizzaContainer.appendChild(pizzaDescriptionContainer);
 
   return pizzaContainer;
 };
+
+// 可以将多个dom 一次性插入
+function appendDomOnce(parent, eles) {
+  if (!parent || !eles.length) return false;
+  var oFragment = document.createDocumentFragment();
+  eles.map(function(e) {
+    oFragment.appendChild(e);
+  })
+  parent.appendChild(oFragment);
+}
+
+// 页面内容初始化
+function initPizzas() {
+  window.performance.mark("mark_start_generating"); // 收集timing数据
+
+
+  // 这个for循环在页面加载时创建并插入了所有的披萨
+  var pizzasDiv = document.getElementById("randomPizzas"),
+      oFragment = document.createDocumentFragment();
+  for (var i = 2; i < 100; i++) {
+    oFragment.appendChild(pizzaElementGenerator(i));
+  }
+  pizzasDiv.appendChild(oFragment);
+
+  //appendDomOnce(parent, eles)
+
+  // 使用User Timing API。这里的测量数据告诉了你生成初始的披萨用了多长时间
+  window.performance.mark("mark_end_generating");
+  window.performance.measure("measure_pizza_generation", "mark_start_generating", "mark_end_generating");
+  var timeToGenerate = window.performance.getEntriesByName("measure_pizza_generation");
+  console.log("Time to generate pizzas on load: " + timeToGenerate[0].duration + "ms");
+}
+
+initPizzas();
+
 
 // 当网站中"Our Pizzas"的滑窗部分移动时调用resizePizzas(size)函数
 var resizePizzas = function(size) {
@@ -457,9 +482,9 @@ var resizePizzas = function(size) {
   // 遍历披萨的元素并改变它们的宽度
   function changePizzaSizes(size) {
     var randomPizzaContainer = document.querySelectorAll(".randomPizzaContainer");
+    var dx = determineDx(randomPizzaContainer[0], size);
+    var newwidth = (randomPizzaContainer[0].offsetWidth + dx) + 'px';
     for (var i = 0; i < randomPizzaContainer.length; i++) {
-      var dx = determineDx(randomPizzaContainer[i], size);
-      var newwidth = (randomPizzaContainer[i].offsetWidth + dx) + 'px';
       randomPizzaContainer[i].style.width = newwidth;
     }
   }
@@ -472,22 +497,6 @@ var resizePizzas = function(size) {
   var timeToResize = window.performance.getEntriesByName("measure_pizza_resize");
   console.log("Time to resize pizzas: " + timeToResize[timeToResize.length-1].duration + "ms");
 };
-
-window.performance.mark("mark_start_generating"); // 收集timing数据
-
-// 这个for循环在页面加载时创建并插入了所有的披萨
-var pizzasDiv = document.getElementById("randomPizzas"),
-    pizzasDivEles = [];
-for (var i = 2; i < 100; i++) {
-  pizzasDivEles.push(pizzaElementGenerator(i));
-}
-appendDomOnce(pizzasDiv, pizzasDivEles);
-
-// 使用User Timing API。这里的测量数据告诉了你生成初始的披萨用了多长时间
-window.performance.mark("mark_end_generating");
-window.performance.measure("measure_pizza_generation", "mark_start_generating", "mark_end_generating");
-var timeToGenerate = window.performance.getEntriesByName("measure_pizza_generation");
-console.log("Time to generate pizzas on load: " + timeToGenerate[0].duration + "ms");
 
 // 背景披萨滚动时调用函数的次数和
 // 由updatePositions()函数使用，用来决定什么时候记录平均帧率
@@ -506,13 +515,15 @@ function logAverageFrame(times) {   // times参数是updatePositions()由User Ti
 // 下面的关于背景滑窗披萨的代码来自于Ilya的demo:
 // https://www.igvita.com/slides/2012/devtools-tips-and-tricks/jank-demo.html
 
+
 // 基于滚动条位置移动背景中的披萨滑窗
 var items = []; //document.querySelectorAll('.mover');
 function updatePositions() {
   frame++;
   window.performance.mark("mark_start_frame");
-  items = items || document.querySelectorAll('.mover');
   var top = document.body.scrollTop;
+  items = items || document.querySelectorAll('.mover');
+
   for (var i = 0; i < items.length; i++) {
     var phase = Math.sin((top / 1250) + (i % 5));
     items[i].style.left = items[i].basicLeft + 100 * phase + 'px';
@@ -536,7 +547,9 @@ document.addEventListener('DOMContentLoaded', function() {
   var cols = 8,
       s = 256,
       movingPizzas1 = document.querySelector("#movingPizzas1"),
+      // 创建一个dom 片段，用于存储创建的 dom 最后再一起append
       oFragment = document.createDocumentFragment();
+
   for (var i = 0; i < 200; i++) {
     var elem = document.createElement('img');
     elem.src = "images/pizza.png";
@@ -549,5 +562,8 @@ document.addEventListener('DOMContentLoaded', function() {
     oFragment.appendChild(elem);
   }
   movingPizzas1.appendChild(oFragment);
-  updatePositions();
+
+  //updatePositions();
+  //延迟执行，可以防止第一次的强制重排 因为要调用 document.body.scrollTop
+  requestAnimationFrame(updatePositions);
 });
