@@ -13,8 +13,8 @@
 
 * Grunt 自动压缩静态文件（css, js, image）；
 
-
-     // 将src目录下的静态文件压缩到dist目录下
+```
+    //将src目录下的静态文件压缩到dist目录下
     {
     	"grunt-contrib-imagemin": "^1.0.1",  // 压缩图片
     	"grunt-contrib-uglify": "~0.4.0",    // 压缩Js文件  .min.js 和 .map文件 用于线上报错定位
@@ -22,6 +22,7 @@
     }
     // grunt 执行命令
     grunt
+```
 
 * 字体文件只加载主要的一个（原来是引用了一套外部字体，改成内联引用其中一个）；
 * style css 压缩并内联到页面顶部，防止阻塞加载；
